@@ -5,19 +5,16 @@
 
 OpenTelemetry distributed tracing and metrics integration for the [Flux](https://github.com/wotek/flux) CQRS / Event Sourcing framework.
 
----
-
 ## Overview
 
 The core `github.com/wotek/flux` framework remains 100% vendor-agnostic and does not depend on OpenTelemetry. Instead, it defines vendor-neutral `Instrumentation` primitives (`TraceID`, `SpanID`, `TraceFlags`) and strongly-typed context reparenting (`WithParent`).
 
 `github.com/wotek/flux-opentelemetry` (`package fluxotel`) is the official translator package. It bridges OpenTelemetry with Flux by providing:
-* **Bus Middlewares:** Seamless tracing and metrics for Command and Query buses.
-* **Store Decorators:** Transparent client spans and metrics for Event Stores, Snapshot Stores, and Projection Stores.
-* **Async Handler Wrappers:** Distributed trace propagation for asynchronous Projectors and Workflows, including full trace continuity across outbox boundaries.
-* **Metrics Catalog:** Standardized, low-cardinality semantic metrics for latency, throughput, and errors.
 
----
+- **Bus Middlewares:** Seamless tracing and metrics for Command and Query buses.
+- **Store Decorators:** Transparent client spans and metrics for Event Stores, Snapshot Stores, and Projection Stores.
+- **Async Handler Wrappers:** Distributed trace propagation for asynchronous Projectors and Workflows, including full trace continuity across outbox boundaries.
+- **Metrics Catalog:** Standardized, low-cardinality semantic metrics for latency, throughput, and errors.
 
 ## Installation
 
@@ -25,13 +22,12 @@ The core `github.com/wotek/flux` framework remains 100% vendor-agnostic and does
 go get github.com/wotek/flux-opentelemetry
 ```
 
-Ensure your project uses `github.com/wotek/flux@v1.3.0` or later.
-
----
+> [!NOTE]
+> Ensure your project uses `github.com/wotek/flux@v1.3.0` or later.
 
 ## Wiring Guides
 
-### 1. Command & Query Buses
+### Command and Query Buses
 
 Wire `CommandMiddleware` and `QueryMiddleware` into your buses:
 
@@ -56,11 +52,10 @@ queryBus.Use(fluxotel.QueryMiddleware(tracer, meter))
 ```
 
 #### Remote Parenting on Commands
+
 When a command is dispatched by an asynchronous Outbox relay, its context contains the parent event's `Instrumentation`. `CommandMiddleware` inspects this instrumentation and links the command execution span to the originating remote span via `trace.ContextWithRemoteSpanContext`, maintaining continuous end-to-end distributed traces.
 
----
-
-### 2. Storage Decorators
+### Storage Decorators
 
 Wrap your event stores, snapshot stores, and projection stores using the decorators:
 
@@ -86,9 +81,7 @@ rawProjStore := projstore.New()
 projectionStore := fluxotel.WrapProjectionStore(rawProjStore, tracer, meter)
 ```
 
----
-
-### 3. Asynchronous Projectors
+### Asynchronous Projectors
 
 Wrap projection handler functions before registering them with `projection.RegisterHandler`:
 
@@ -112,9 +105,7 @@ projection.RegisterHandler(projector, fluxotel.WrapProjectionHandler(tracer, met
 ))
 ```
 
----
-
-### 4. Workflows & Outbox Dispatches
+### Workflows and Outbox Dispatches
 
 Wrap workflow transition handlers before registering them with `workflow.RegisterHandler`:
 
@@ -141,8 +132,6 @@ workflow.RegisterHandler(orchestrator, wfStore, fluxotel.WrapWorkflowHandler(tra
 go func() { _ = orchestrator.Start(ctx) }()
 wfStore.StartRelay(ctx)
 ```
-
----
 
 ## End-to-End Distributed Trace Continuity
 
@@ -181,14 +170,12 @@ sequenceDiagram
 
 All operations—synchronous command execution, persistence, projection updates, workflow steps, and asynchronous outbox commands—share the same distributed `TraceID`.
 
----
-
 ## Metrics Catalog
 
-All status attributes are strictly constrained to `"ok"` or `"error"`. High-cardinality values (e.g. stream IDs, aggregate IDs, user IDs) are never added to metrics.
+All status attributes are strictly constrained to `"ok"` or `"error"`. High-cardinality values (for example, stream IDs, aggregate IDs, user IDs) are never added to metrics.
 
 | Instrument | Type | Unit | Attributes | Purpose |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `flux.command.duration` | Histogram | `s` | `flux.command.type`, `flux.command.status` | Command handler latency |
 | `flux.command.count` | Counter | `1` | `flux.command.type`, `flux.command.status` | Command throughput and error rate |
 | `flux.query.duration` | Histogram | `s` | `flux.query.type`, `flux.query.status` | Query handler latency |
@@ -208,12 +195,10 @@ All status attributes are strictly constrained to `"ok"` or `"error"`. High-card
 
 ### Observability Notes
 
-* **Iterator Span Lifecycles:** Event store `Read` and `Stream` wrappers implement two-phase span lifecycles. A short setup span (`flux.event_store.read` / `flux.event_store.stream`) covers the initial query and completes immediately when the iterator handle is returned. An iteration span (`flux.event_store.read.iteration` / `flux.event_store.stream.iteration`) covers consumer ranging, ending when iteration finishes, halts early, or fails. Callers should consume returned iterators.
-* **Snapshot Miss Semantics:** A snapshot cache miss (`flux.ErrSnapshotNotFound`) is expected behavior for snapshot repositories and is not treated as a span error. The span status remains `ok`, the span attribute `flux.snapshot.miss=true` is recorded, and the miss is counted via `flux.snapshot.load.misses`. Real persistence errors continue to record span errors and report `error` status.
-* **Outbox Metrics:** Future outbox queue metrics (`flux.outbox.dispatch.duration`, `flux.outbox.dispatch.count`, `flux.outbox.depth`) are designated for v1.1. In v1.0, outbox dispatch operations are fully traced as child spans via `CommandMiddleware`.
-* **Cardinality Guarantees:** While distributed trace spans may record contextual IDs (such as `flux.stream.id`, `flux.event.id`, and `flux.workflow.id`) to facilitate deep log/trace correlation, metric attributes remain strictly low-cardinality (`type`, `name`, and locked `status` values of `"ok"` or `"error"`).
-
----
+- **Iterator Span Lifecycles:** Event store `Read` and `Stream` wrappers implement two-phase span lifecycles. A short setup span (`flux.event_store.read` / `flux.event_store.stream`) covers the initial query and completes immediately when the iterator handle is returned. An iteration span (`flux.event_store.read.iteration` / `flux.event_store.stream.iteration`) covers consumer ranging, ending when iteration finishes, halts early, or fails. Callers should consume returned iterators.
+- **Snapshot Miss Semantics:** A snapshot cache miss (`flux.ErrSnapshotNotFound`) is expected behavior for snapshot repositories and is not treated as a span error. The span status remains `ok`, the span attribute `flux.snapshot.miss=true` is recorded, and the miss is counted via `flux.snapshot.load.misses`. Real persistence errors continue to record span errors and report `error` status.
+- **Outbox Metrics:** Future outbox queue metrics (`flux.outbox.dispatch.duration`, `flux.outbox.dispatch.count`, `flux.outbox.depth`) are designated for v1.1. In v1.0, outbox dispatch operations are fully traced as child spans via `CommandMiddleware`.
+- **Cardinality Guarantees:** While distributed trace spans may record contextual IDs (such as `flux.stream.id`, `flux.event.id`, and `flux.workflow.id`) to facilitate deep log/trace correlation, metric attributes remain strictly low-cardinality (`type`, `name`, and locked `status` values of `"ok"` or `"error"`).
 
 ## License
 
