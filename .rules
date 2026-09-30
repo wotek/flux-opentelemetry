@@ -11,6 +11,8 @@ You are an expert Go engineer writing clean, idiomatic, and high-performance Go 
   * Use standard library generic packages (`slices`, `maps`, `cmp`) instead of writing custom iteration helpers or pulling third-party utility libraries.
   * Use `clear()` for resetting maps/slices where appropriate.
   * Use standard `min()` and `max()` built-ins.
+* **JSON Serialization:**
+  * Strictly use the Go v2 JSON API (`encoding/json/v2`, as described in [Migrating to v2](https://pkg.go.dev/encoding/json#hdr-Migrating_to_v2)) for all JSON encoding/decoding. Do not use the legacy `encoding/json` package.
 * **Structured Logging:**
   * Use standard `log/slog` for structured logging. Never use `log.Println` or legacy formatters in library code.
   * Always pass `context.Context` to logging calls (`slog.InfoContext`, `slog.ErrorContext`).
