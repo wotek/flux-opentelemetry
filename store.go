@@ -247,6 +247,39 @@ func (s *eventStoreWrapper) Stream(ctx context.Context, position uint64) (flux.S
 	}, nil
 }
 
+func (s *eventStoreWrapper) Find(ctx context.Context, stream flux.Stream, eventID flux.Identifier) (flux.Envelope, error) {
+	spanCtx, span := s.tracer.Start(ctx, "flux.event_store.find",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(
+			attribute.String(AttrStreamID, stream.Identifier.String()),
+			attribute.String(AttrEventID, eventID.String()),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
+	env, err := s.store.Find(spanCtx, stream, eventID)
+	duration := time.Since(start).Seconds()
+
+	status := StatusOk
+	if err != nil {
+		status = StatusError
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+	} else {
+		span.SetStatus(codes.Ok, "")
+	}
+
+	if s.readDuration != nil {
+		s.readDuration.Record(spanCtx, duration, metric.WithAttributes(
+			attribute.String(AttrEventStoreOp, "find"),
+			attribute.String(AttrEventStoreStatus, status),
+		))
+	}
+
+	return env, err
+}
+
 type snapshotStoreWrapper[S any] struct {
 	store        flux.SnapshotStore[S]
 	tracer       trace.Tracer

@@ -7,6 +7,7 @@ import (
 
 	"github.com/wotek/flux"
 	fluxotel "github.com/wotek/flux-opentelemetry"
+	chkstore "github.com/wotek/flux/checkpoint/store"
 	"github.com/wotek/flux/command"
 	eventstore "github.com/wotek/flux/event/store"
 	"github.com/wotek/flux/projection"
@@ -151,7 +152,7 @@ func TestE2E_Acceptance_TraceContinuity(t *testing.T) {
 
 	// 5. Setup Workflow Orchestrator with WrapWorkflowHandler
 	orchID := flux.NewIdentifier("flux", "", "order", "", "orchestrator", "fulfillment", "")
-	orch := workflow.New(orchID, es, nil)
+	orch := workflow.New(orchID, es, chkstore.New())
 
 	workflow.RegisterHandler(orch, wfStore, fluxotel.WrapWorkflowHandler(tracer, meter, func(wfCtx workflow.Context, wf *OrderWorkflow, e OrderPlaced) error {
 		workflow.EnqueueCommand(wfCtx, SendConfirmationEmailCommand{OrderID: e.OrderID, Recipient: "customer@example.com"})

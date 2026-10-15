@@ -25,6 +25,7 @@ type mockEventStore struct {
 	appendFunc func(ctx context.Context, stream flux.Stream, expectedRevision uint64, events []flux.Envelope) error
 	readFunc   func(ctx context.Context, stream flux.Stream, fromRevision uint64) (flux.StreamIterator, error)
 	streamFunc func(ctx context.Context, position uint64) (flux.StreamIterator, error)
+	findFunc   func(ctx context.Context, stream flux.Stream, eventID flux.Identifier) (flux.Envelope, error)
 }
 
 func (m *mockEventStore) Append(ctx context.Context, stream flux.Stream, expectedRevision uint64, events []flux.Envelope) error {
@@ -46,6 +47,13 @@ func (m *mockEventStore) Stream(ctx context.Context, position uint64) (flux.Stre
 		return m.streamFunc(ctx, position)
 	}
 	return func(yield func(flux.Envelope, error) bool) {}, nil
+}
+
+func (m *mockEventStore) Find(ctx context.Context, stream flux.Stream, eventID flux.Identifier) (flux.Envelope, error) {
+	if m.findFunc != nil {
+		return m.findFunc(ctx, stream, eventID)
+	}
+	return flux.Envelope{}, nil
 }
 
 type mockSnapshotStore[S any] struct {
@@ -519,5 +527,38 @@ func TestWrapProjectionStore(t *testing.T) {
 	}
 	if !foundUpdateDuration {
 		t.Errorf("metric %s not found", fluxotel.MetricProjectionStoreUpdateDuration)
+	}
+}
+
+func TestEventStore_Find(t *testing.T) {
+	exporter, tracer, _, _ := setupTelemetry()
+
+	mock := &mockEventStore{
+		findFunc: func(ctx context.Context, s flux.Stream, id flux.Identifier) (flux.Envelope, error) {
+			return flux.Envelope{
+				Identifier: id,
+				Stream:     s,
+			}, nil
+		},
+	}
+
+	wrapped := fluxotel.WrapEventStore(mock, tracer, nil)
+	stream := flux.Stream{Identifier: flux.NewIdentifier("flux", "", "order", "", "order", "123", "")}
+	eventID := flux.NewIdentifier("flux", "", "order", "", "event", "evt-1", "")
+
+	env, err := wrapped.Find(context.Background(), stream, eventID)
+	if err != nil {
+		t.Fatalf("unexpected find error: %v", err)
+	}
+	if env.Identifier != eventID {
+		t.Errorf("env.Identifier = %v, want %v", env.Identifier, eventID)
+	}
+
+	spans := exporter.GetSpans()
+	if len(spans) != 1 {
+		t.Fatalf("expected 1 span, got %d", len(spans))
+	}
+	if spans[0].Name != "flux.event_store.find" {
+		t.Errorf("span name = %q, want flux.event_store.find", spans[0].Name)
 	}
 }

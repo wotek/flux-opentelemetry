@@ -14,8 +14,8 @@ github.com/oklog/ulid/v2 v2.1.2/go.mod h1:rcEKHmBBKfef9DhnvX7y1HZBYxjXb0cP5ExxNs
 github.com/pborman/getopt v0.0.0-20170112200414-7148bc3a4c30/go.mod h1:85jBQOZwpVEaDAr341tbn15RS4fCAsIst0qp7i8ex1o=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
-github.com/wotek/flux v1.3.0 h1:Pjom5ClblhFSmW4dA7FnmPKrhQ5PrGMjhcmAdffGel4=
-github.com/wotek/flux v1.3.0/go.mod h1:uf3nwMYF39xa4RzcFqM30DUQ4KlXRivPb84CQLeDn24=
+github.com/wotek/flux v1.7.0 h1:8mNTvAwcDggkwbdP6g2iOwhcUNuox8p369XbJf8Plpk=
+github.com/wotek/flux v1.7.0/go.mod h1:kzsk29DbyCoJbx2WKS0LnWqj5ruMPtNKA+Vot3Wll9E=
 go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
 go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
 go.opentelemetry.io/otel v1.46.0 h1:FHt5/CDyVxi/8IM1CH7VE/rRgq3kLHa2mSTVMO8AWyc=
